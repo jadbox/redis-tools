@@ -45,12 +45,12 @@ Examples:
                                                           with a limit of 1000 per script run
 
   python redis-copy.py \
-  --source=10.10.9.61:6379 \
-  --target=10.10.10.142:7100 \
+  --source=192.168.0.99:6379 \
+  --target=192.168.0.101:6379 \
   --databases=1 \
   --clustered=2 \                                       copy from non-clustered db of table 1 into the destination cluster. The dest table will be 0 
                                                         as defined by redis-cluster. Since --clustered=2, each dest key will be 
-                                                        prepended with "DB_keyname". In this case, keys will be "1_keyname".
+                                                        prepended with "DB_keyname". In this case, keys will be named "1_keyname".
 
 """
 

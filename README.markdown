@@ -27,12 +27,15 @@ and continue from there on the next run. It does this until there is no more key
 
 ####Options:
 
-    -l ..., --limit=...         optional numbers of keys to copy per run, if not defined 10000 is the default . e.g. 1000
-    -s ..., --source=...        source redis server "ip:port" to copy keys from. e.g. 192.168.0.99:6379
-    -t ..., --target=...        target redis server "ip:port" to copy keys to. e.g. 192.168.0.101:6379
-    -d ..., --databases=...     comma separated list of redis databases to select when copying. e.g. 2,5
-    -h, --help                  show this help
-    --clean                     clean all variables, temp lists created previously by the script
+  -l ..., --limit=...         optional numbers of keys to copy per run, if not defined 10000 is the default . e.g. 1000
+  -s ..., --source=...        source redis server "ip:port" to copy keys from. e.g. 192.168.0.99:6379
+  -t ..., --target=...        target redis server "ip:port" to copy keys to. e.g. 192.168.0.101:6379
+  -d ..., --databases=...     comma separated list of redis databases to select when copying. e.g. 2,5
+  -h, --help                  show this help
+  -S ..., --prefix=...        optional to prefix destination key with value (this is overwritten if --clustered=2)
+  -T ..., --totable=...         optional to target a different destination database table
+  -C ..., --clustered=...     optional 0 or 1. Use 1 if the destination is a cluster. Use 2 to prefix the origin DB in format DB_keyname... ex: "0_keyname"
+  --clean                     clean all variables, temp lists created previously by the script
 
 
 ####Examples:
@@ -55,6 +58,14 @@ and continue from there on the next run. It does this until there is no more key
     --target=192.168.0.101:6379 \
     --databases=2,5                                         copy all keys in db 2 and 5 from server 192.168.0.99:6379 to server 192.168.0.101:6379
                                                           with a limit of 1000 per script run
+
+    python redis-copy.py \
+    --source=192.168.0.99:6379 \
+    --target=192.168.0.101:6379 \
+    --databases=1 \
+    --clustered=2                                       copy from non-clustered db of table 1 into the destination cluster. The dest table will be 0 
+                                                        as defined by redis-cluster. Since --clustered=2, each dest key will be 
+                                                        prepended with "DB_keyname". In this case, keys will be named "1_keyname".
 
 
 
