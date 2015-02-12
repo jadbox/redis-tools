@@ -27,15 +27,15 @@ and continue from there on the next run. It does this until there is no more key
 
 ####Options:
 
-  -l ..., --limit=...         optional numbers of keys to copy per run, if not defined 10000 is the default . e.g. 1000
-  -s ..., --source=...        source redis server "ip:port" to copy keys from. e.g. 192.168.0.99:6379
-  -t ..., --target=...        target redis server "ip:port" to copy keys to. e.g. 192.168.0.101:6379
-  -d ..., --databases=...     comma separated list of redis databases to select when copying. e.g. 2,5
-  -h, --help                  show this help
-  -S ..., --prefix=...        optional to prefix destination key with value (this is overwritten if --clustered=2)
-  -T ..., --totable=...         optional to target a different destination database table
-  -C ..., --clustered=...     optional 0 or 1. Use 1 if the destination is a cluster. Use 2 to prefix the origin DB in format DB_keyname... ex: "0_keyname"
-  --clean                     clean all variables, temp lists created previously by the script
+    -l ..., --limit=...         optional numbers of keys to copy per run, if not defined 10000 is the default . e.g. 1000
+    -s ..., --source=...        source redis server "ip:port" to copy keys from. e.g. 192.168.0.99:6379
+    -t ..., --target=...        target redis server "ip:port" to copy keys to. e.g. 192.168.0.101:6379
+    -d ..., --databases=...     comma separated list of redis databases to select when copying. e.g. 2,5
+    -h, --help                  show this help
+    -S ..., --prefix=...        optional to prefix destination key with value (this is overwritten if --clustered=2)
+    -T ..., --totable=...         optional to target a different destination database table
+    -C ..., --clustered=...     optional 0 or 1. Use 1 if the destination is a cluster. Use 2 to prefix the origin DB in format DB_keyname... ex: "0_keyname"
+    --clean                     clean all variables, temp lists created previously by the script
 
 
 ####Examples:
