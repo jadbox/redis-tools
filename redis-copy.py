@@ -16,6 +16,7 @@ Options:
   -d ..., --databases=...     comma separated list of redis databases to select when copying. e.g. 2,5
   -h, --help                  show this help
   -S ..., --prefix=...        optional to prefix destination key with value
+  -T ..., --table=...         optional to target a different destination database table
   --clean                     clean all variables, temp lists created previously by the script
 
 Dependencies: redis (redis-py: sudo pip install redis)
@@ -67,11 +68,12 @@ class RedisCopy:
     # numbers of keys to copy on each iteration
     limit = 10000
 
-    def __init__(self, source, target, dbs, prefix):
+    def __init__(self, source, target, dbs, prefix, toTable):
         self.source = source
         self.target = target
         self.dbs = dbs
         self.prefix = prefix
+        self.toTable = toTable;
 
     def save_keylists(self):
         """Function to save the keys' names of the source redis server into a list for later usage.
@@ -136,8 +138,11 @@ class RedisCopy:
             print "Started copy of %s keys from %d to %d at %s...\n" % (servername, keymoved, dbsize, time.strftime("%Y-%m-%d %I:%M:%S"))
 
             #get redis handle for corresponding target server-db
+            destTable = db;
+            if self.toTable!=-1:
+                destTable = self.toTable
             rr = redis.StrictRedis(
-                host=self.target['host'], port=self.target['port'], db=db)
+                host=self.target['host'], port=self.target['port'], db=destTable)
 
             #max index for lrange
             newkeymoved = keymoved + \
@@ -222,7 +227,7 @@ class RedisCopy:
         print "Done.\n"
 
 
-def main(source, target, databases, limit=None, clean=False):
+def main(source, target, databases, limit=None, clean=False, prefix="", toTable=-1):
     #getting source and target
     if (source == target):
         exit('The 2 servers adresses are the same. e.g. python redis-copy.py 127.0.0.1:6379 127.0.0.1:63791  0,1')
@@ -249,7 +254,7 @@ def main(source, target, databases, limit=None, clean=False):
     except AttributeError as e:
         exit('Please this script requires redis-py >= 2.4.10, your current version is :' + redis.__version__)
 
-    mig = RedisCopy(source_server, target_server, dbs)
+    mig = RedisCopy(source_server, target_server, dbs, prefix, toTable)
 
     if clean == False:
         #check if script already running
@@ -280,8 +285,9 @@ def usage():
 if __name__ == "__main__":
     clean = False
     prefix = "";
+    toTable = -1;
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hl:s:t:d:S:", ["help", "limit=", "source=", "target=", "databases=", "clean", "prefix="])
+        opts, args = getopt.getopt(sys.argv[1:], "hl:s:t:d:S:T:", ["help", "limit=", "source=", "target=", "databases=", "clean", "prefix=", "table="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -301,6 +307,8 @@ if __name__ == "__main__":
             databases = arg
         elif opt in ("-S", "--prefix"):
             prefix = arg
+        elif opt in ("-T", "--table"):
+            toTable = arg
 
 
     try:
@@ -309,6 +317,6 @@ if __name__ == "__main__":
         limit = None
 
     try:
-        main(source, target, databases, limit, clean, prefix)
+        main(source, target, databases, limit, clean, prefix, toTable)
     except NameError as e:
         usage()
