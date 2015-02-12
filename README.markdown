@@ -10,6 +10,7 @@ It accepts as input a pipe with redis commands formatted as "DEL key", "SET key 
 
 
 #**Redis Copy**
+NOW SUPPORTS REDIS-CLUSTER DESTINATIONS
 
 Redis Copy the keys in a source redis server into another target redis server.
 The script probably needs to be added to a cron job if the keys are a lot because it only copies a fix number of keys at a time
@@ -17,7 +18,8 @@ and continue from there on the next run. It does this until there is no more key
 
 ####Dependency:
 
-    sudo easy_install -U redis
+    sudo easy_install -U redis  (OR: sudo pip install redis)
+    redis-py-cluster  (clone https://github.com/Grokzen/redis-py-cluster and run: sudo python setup.py install)
 
 ####Usage:
 

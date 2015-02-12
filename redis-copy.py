@@ -15,11 +15,14 @@ Options:
   -t ..., --target=...        target redis server "ip:port" to copy keys to. e.g. 192.168.0.101:6379
   -d ..., --databases=...     comma separated list of redis databases to select when copying. e.g. 2,5
   -h, --help                  show this help
-  -S ..., --prefix=...        optional to prefix destination key with value
-  -T ..., --table=...         optional to target a different destination database table
+  -S ..., --prefix=...        optional to prefix destination key with value (this is overwritten if --clustered=2)
+  -T ..., --totable=...         optional to target a different destination database table
+  -C ..., --clustered=...     optional 0 or 1. Use 1 if the destination is a cluster. Use 2 to prefix the origin DB in format DB_keyname... ex: "0_keyname"
   --clean                     clean all variables, temp lists created previously by the script
 
-Dependencies: redis (redis-py: sudo pip install redis)
+**Dependencies:** 
+redis (redis-py: sudo pip install redis)
+redis-py-cluster (clone https://github.com/Grokzen/redis-py-cluster and run: sudo python setup.py install)
 
 Examples:
   python redis-copy.py --help                                show this doc
@@ -41,6 +44,14 @@ Examples:
   --databases=2,5                                         copy all keys in db 2 and 5 from server 192.168.0.99:6379 to server 192.168.0.101:6379
                                                           with a limit of 1000 per script run
 
+  python redis-copy.py \
+  --source=10.10.9.61:6379 \
+  --target=10.10.10.142:7100 \
+  --databases=1 \
+  --clustered=2 \                                       copy from non-clustered db of table 1 into the destination cluster. The dest table will be 0 
+                                                        as defined by redis-cluster. Since --clustered=2, each dest key will be 
+                                                        prepended with "DB_keyname". In this case, keys will be "1_keyname".
+
 """
 
 __author__ = "Salimane Adjao Moustapha (salimane@gmail.com)"
@@ -54,6 +65,7 @@ import redis
 import time
 import sys
 import getopt
+from rediscluster import StrictRedisCluster
 
 
 class RedisCopy:
@@ -68,12 +80,13 @@ class RedisCopy:
     # numbers of keys to copy on each iteration
     limit = 10000
 
-    def __init__(self, source, target, dbs, prefix, toTable):
+    def __init__(self, source, target, dbs, prefix, toTable, clustered):
         self.source = source
         self.target = target
         self.dbs = dbs
         self.prefix = prefix
         self.toTable = toTable;
+        self.clustered = clustered;
 
     def save_keylists(self):
         """Function to save the keys' names of the source redis server into a list for later usage.
@@ -138,11 +151,15 @@ class RedisCopy:
             print "Started copy of %s keys from %d to %d at %s...\n" % (servername, keymoved, dbsize, time.strftime("%Y-%m-%d %I:%M:%S"))
 
             #get redis handle for corresponding target server-db
-            destTable = db;
-            if self.toTable!=-1:
-                destTable = self.toTable
-            rr = redis.StrictRedis(
-                host=self.target['host'], port=self.target['port'], db=destTable)
+            destTable = db if self.toTable==-1 else self.toTable;
+
+            if self.clustered=="0":
+                rr = redis.StrictRedis(host=self.target['host'], port=self.target['port'], db=destTable)
+            else:
+                rr = StrictRedisCluster(startup_nodes=[{'host':self.target['host'], 'port':self.target['port']}])
+                if self.clustered=="2":
+                    self.prefix = str(db) + "_"
+                    print "Using table prefix of: %s" % (self.prefix)
 
             #max index for lrange
             newkeymoved = keymoved + \
@@ -199,12 +216,18 @@ class RedisCopy:
         """Function to flush the target server.
         """
         for db in self.dbs:
+            destTable = db if self.toTable==-1 else self.toTable;
+
             servername = self.target['host'] + ":" + str(
-                self.target['port']) + ":" + str(db)
+                self.target['port']) + ":" + str(destTable)
             print "Flushing server %s at %s...\n" % (
                 servername, time.strftime("%Y-%m-%d %I:%M:%S"))
-            r = redis.StrictRedis(
-                host=self.target['host'], port=self.target['port'], db=db)
+
+            if self.clustered==0:
+                r = redis.StrictRedis(host=self.target['host'], port=self.target['port'], db=destTable)
+            else:
+                r = StrictRedisCluster(startup_nodes=[{'host':self.target['host'], 'port':self.target['port']}])
+
             r.flushdb()
             print "Flushed server %s at %s...\n" % (
                 servername, time.strftime("%Y-%m-%d %I:%M:%S"))
@@ -227,7 +250,7 @@ class RedisCopy:
         print "Done.\n"
 
 
-def main(source, target, databases, limit=None, clean=False, prefix="", toTable=-1):
+def main(source, target, databases, limit=None, clean=False, prefix="", toTable="-1", clustered="0"):
     #getting source and target
     if (source == target):
         exit('The 2 servers adresses are the same. e.g. python redis-copy.py 127.0.0.1:6379 127.0.0.1:63791  0,1')
@@ -254,7 +277,7 @@ def main(source, target, databases, limit=None, clean=False, prefix="", toTable=
     except AttributeError as e:
         exit('Please this script requires redis-py >= 2.4.10, your current version is :' + redis.__version__)
 
-    mig = RedisCopy(source_server, target_server, dbs, prefix, toTable)
+    mig = RedisCopy(source_server, target_server, dbs, prefix, toTable, clustered)
 
     if clean == False:
         #check if script already running
@@ -285,9 +308,10 @@ def usage():
 if __name__ == "__main__":
     clean = False
     prefix = "";
-    toTable = -1;
+    toTable = "-1";
+    clustered = "0";
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hl:s:t:d:S:T:", ["help", "limit=", "source=", "target=", "databases=", "clean", "prefix=", "table="])
+        opts, args = getopt.getopt(sys.argv[1:], "hl:s:t:d:S:T:C:", ["help", "limit=", "source=", "target=", "databases=", "clean", "prefix=", "totable=", "clustered="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -307,8 +331,10 @@ if __name__ == "__main__":
             databases = arg
         elif opt in ("-S", "--prefix"):
             prefix = arg
-        elif opt in ("-T", "--table"):
+        elif opt in ("-T", "--totable"):
             toTable = arg
+        elif opt in ("-C", "--clustered"):
+            clustered = arg
 
 
     try:
@@ -317,6 +343,6 @@ if __name__ == "__main__":
         limit = None
 
     try:
-        main(source, target, databases, limit, clean, prefix, toTable)
+        main(source, target, databases, limit, clean, prefix, toTable, clustered)
     except NameError as e:
         usage()
