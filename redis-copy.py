@@ -15,6 +15,7 @@ Options:
   -t ..., --target=...        target redis server "ip:port" to copy keys to. e.g. 192.168.0.101:6379
   -d ..., --databases=...     comma separated list of redis databases to select when copying. e.g. 2,5
   -h, --help                  show this help
+  -S ..., --prefix=...        optional to prefix destination key with value
   --clean                     clean all variables, temp lists created previously by the script
 
 Dependencies: redis (redis-py: sudo pip install redis)
@@ -66,10 +67,11 @@ class RedisCopy:
     # numbers of keys to copy on each iteration
     limit = 10000
 
-    def __init__(self, source, target, dbs):
+    def __init__(self, source, target, dbs, prefix):
         self.source = source
         self.target = target
         self.dbs = dbs
+        self.prefix = prefix
 
     def save_keylists(self):
         """Function to save the keys' names of the source redis server into a list for later usage.
@@ -141,6 +143,7 @@ class RedisCopy:
             newkeymoved = keymoved + \
                 self.limit if dbsize > keymoved + self.limit else dbsize
 
+            prefix = self.prefix
             for key in r.lrange(self.mprefix + self.keylistprefix + servername, keymoved, newkeymoved):
                 #get key type
                 ktype = r.type(key)
@@ -150,32 +153,32 @@ class RedisCopy:
 
                 #save key to target server-db
                 if ktype == 'string':
-                    rr.set(key, r.get(key))
+                    rr.set(prefix+key, r.get(key))
                 elif ktype == 'hash':
-                    rr.hmset(key, r.hgetall(key))
+                    rr.hmset(prefix+key, r.hgetall(key))
                 elif ktype == 'list':
                     if key == self.mprefix + "keylist:" + servername:
                         continue
                     #value = r.lrange(key, 0, -1)
                     #rr.rpush(key, *value)
                     for k in r.lrange(key, 0, -1):
-                        rr.rpush(key, k)
+                        rr.rpush(prefix+key, k)
                 elif ktype == 'set':
                     #value = r.smembers(key)
                     #rr.sadd(key, *value)
                     for k in r.smembers(key):
-                        rr.sadd(key, k)
+                        rr.sadd(prefix+key, k)
                 elif ktype == 'zset':
                     #value = r.zrange(key, 0, -1, withscores=True)
                     #rr.zadd(key, **dict(value))
                     for k, v in r.zrange(key, 0, -1, withscores=True):
-                        rr.zadd(key, v, k)
+                        rr.zadd(prefix+key, v, k)
 
                 # Handle keys with an expire time set
                 kttl = r.ttl(key)
                 kttl = -1 if kttl is None else int(kttl)
                 if kttl != -1:
-                    rr.expire(key, kttl)
+                    rr.expire(prefix+key, kttl)
 
                 moved += 1
 
@@ -276,8 +279,9 @@ def usage():
 
 if __name__ == "__main__":
     clean = False
+    prefix = "";
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hl:s:t:d:", ["help", "limit=", "source=", "target=", "databases=", "clean"])
+        opts, args = getopt.getopt(sys.argv[1:], "hl:s:t:d:S:", ["help", "limit=", "source=", "target=", "databases=", "clean", "prefix="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -295,6 +299,9 @@ if __name__ == "__main__":
             target = arg
         elif opt in ("-d", "--databases"):
             databases = arg
+        elif opt in ("-S", "--prefix"):
+            prefix = arg
+
 
     try:
         limit = int(limit)
@@ -302,6 +309,6 @@ if __name__ == "__main__":
         limit = None
 
     try:
-        main(source, target, databases, limit, clean)
+        main(source, target, databases, limit, clean, prefix)
     except NameError as e:
         usage()
