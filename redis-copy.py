@@ -17,7 +17,7 @@ Options:
   -h, --help                  show this help
   -S ..., --prefix=...        optional to prefix destination key with value (this is overwritten if --clustered=2)
   -T ..., --totable=...         optional to target a different destination database table
-  -C ..., --clustered=...     optional 0 or 1. Use 1 if the destination is a cluster. Use 2 to prefix the origin DB in format DB_keyname... ex: "0_keyname"
+  -C ..., --clustered=...     optional 0 or 1. Use 1 if the destination is a cluster. Use 2 to prefix the origin DB name into the desk key. Ex: "0_keyname"
   --clean                     clean all variables, temp lists created previously by the script
 
 **Dependencies:** 
