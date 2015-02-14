@@ -16,7 +16,7 @@ Options:
   -d ..., --databases=...     comma separated list of redis databases to select when copying. e.g. 2,5
   -h, --help                  show this help
   -S ..., --prefix=...        optional to prefix destination key with value (this is overwritten if --clustered=2)
-  -T ..., --totable=...         optional to target a different destination database table
+  -T ..., --totable=...       optional to target a different destination database table  (not used if dest is a cluster)
   -C ..., --clustered=...     optional 0, 1, 2. Use 1 if the destination is a cluster. Use 2 to prefix the origin DB name into the destination key. Ex: "0_keyname"
   --clean                     clean all variables, temp lists created previously by the script
 
